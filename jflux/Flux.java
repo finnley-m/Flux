@@ -64,7 +64,7 @@ public class Flux{
         }
     }
 
-    private static void error(int line, String message) {
+    public static void error(int line, String message) {
         report(line, "", message);
     }
 
