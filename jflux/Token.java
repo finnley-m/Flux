@@ -14,7 +14,7 @@ public class Token {
         this.line    = line;
     }
 
-    // overide for the built in toString so we can print it
+    // overide for the built in toString so we can print it     
     public String toString() {
         return type + " " + lexeme + " " + literal;
     }
