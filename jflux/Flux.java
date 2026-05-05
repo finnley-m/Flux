@@ -68,6 +68,14 @@ public class Flux{
         report(line, "", message);
     }
 
+    public static void error(Token token, String message){
+        if(token.type == TokenType.EOF){ // specifically say at end of file as EOF isnt code
+            report(token.line, " at end", message);
+        } else {
+            report(token.line, " at '" + token.lexeme + "'", message);
+        }
+    }
+
     private static void report(int line, String where, String message) {
         System.err.println("[line " + line + " ] Error" + where + ": " + message);
         hadError = true;

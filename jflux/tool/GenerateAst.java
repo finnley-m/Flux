@@ -21,7 +21,7 @@ public class GenerateAst {
     } 
 
     private static void defineAst(String outputDir,
-                              String baseName, 
+                              String baseName,  // name of the base class being generated
                               List<String> types) throws IOException {
 
         String path = outputDir + "/" + baseName + ".java";
@@ -33,11 +33,18 @@ public class GenerateAst {
         writer.println();
         writer.println("abstract class " + baseName + " {");
 
+        defineVisitor(writer, baseName, types);
+
+        // AST classes :
         for (String type : types) {
-            String className = type.split(":")[0].trim();
+            String className = type.split(":")[0].trim(); // name of the specific
             String fields    = type.split(":")[1].trim();
             defineType(writer, baseName, className, fields);
         }
+
+        // the base accept() method we will override
+        writer.println();
+        writer.println("\tabstract<R> R accept(Visitor<R> visitor);");
 
         writer.println("}");
         writer.close();
@@ -61,10 +68,44 @@ public class GenerateAst {
         }
         writer.println("\t\t}");
 
+        // visitor pattern
+        // each subclass implements that and calls the right visit method for its own type
+        writer.println();
+        writer.println("\t\t@Override");
+        // generic return type R
+        writer.println("\t\t<R> R accept(Visitor<R> visitor) {");
+        // e.g. return visitor.visitBinaryExpr(this)
+        // this will pass the instance of the class Binary with all its relevant fields (left, operator, right)
+        // into the visitor, e.g. Interpreter which will evaluate the result and return it
+        writer.println("\t\t\treturn visitor.visit" + className + baseName + "(this);");
+        writer.println("\t\t}");
+
         // fields
         writer.println();
         for (String field : fields) {
             writer.println("\t\tfinal " + field + ";");
+        }
+
+        writer.println("\t}");
+    }
+
+    /* Binary Example:
+    Parser builds a Binary node
+    Interpreter calls expr.accept(this)
+    Binary.accept calls visitor.visitBinary(this)
+    Interpreter.visitBinary evaluates left and right sides and applies the evaluation
+    */
+    private static void defineVisitor(PrintWriter writer, String baseName, List<String> types) {
+        // <R> means the visitor can return any type. R stands for return type
+        writer.println("\tinterface Visitor<R> {");
+
+        // Here, we iterate through all of the subclasses and declare a visit method for each one. 
+        // When we define new expression types later, this will automatically include them.
+        for(String type : types) {
+            String typeName = type.split(":")[0].trim();
+            writer.println("\t\tR visit" + typeName + baseName + "("
+                           + typeName + " " + baseName.toLowerCase() + ");" 
+            );
         }
 
         writer.println("\t}");
