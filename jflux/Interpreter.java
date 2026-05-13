@@ -1,17 +1,26 @@
 package jflux;
 
-import static jflux.TokenType.BANG_EQUAL;
-import static jflux.TokenType.EQUAL_EQUAL;
-import static jflux.TokenType.GREATER;
-import static jflux.TokenType.GREATER_EQUAL;
-import static jflux.TokenType.LESS;
-import static jflux.TokenType.LESS_EQUAL;
-import static jflux.TokenType.PLUS;
-
-import jflux.Expr.Unary;
+import static jflux.TokenType.*;
 
 // declare the class as a visitor to the expressions
-public class Interpreter implements Expr.Visitor<Object> {
+public class Interpreter implements Expr.Visitor<Object>,
+                                    Stmt.Visitor<Void> {
+    
+    public void interpret(Expr expression) {
+        try {
+            Object value = evaluate(expression);
+            System.out.println(stringify(value));
+        } catch (RuntimeError error){
+            Flux.runtimeError(error);
+        }
+    }
+
+    @Override
+    public Void visitExpressionStmt(Stmt.Expression stmt) {
+        evaluate(stmt.expression);
+        return null;
+    }
+    
     @Override
     public Object visitLiteralExpr(Expr.Literal expr) {
         return expr.value;
@@ -60,10 +69,17 @@ public class Interpreter implements Expr.Visitor<Object> {
                     return (double)left + (double)right;
                 }
 
-                if (left instanceof String && right instanceof String) {
+                else if (left instanceof String && right instanceof String) {
                     return (String)left + (String)right;
                 }
-                throw new RuntimeError(expr.operator, "Operands must be two numbers or two strings");
+
+                else if (left instanceof String && right instanceof Double ||
+                        left instanceof Double && right instanceof String
+                ) {
+                    return (String)left.toString() + (String)right.toString();
+                }
+
+                throw new RuntimeError(expr.operator, "Operands must be number and string on both side");
 
             case GREATER:
                 checkNumberOperands(expr.operator, left, right);
@@ -84,14 +100,6 @@ public class Interpreter implements Expr.Visitor<Object> {
         }
     }
 
-    public void interpret(Expr expression) {
-        try {
-            Object value = evaluate(expression);
-            System.out.println(stringify(value));
-        } catch (RuntimeError error){
-            Flux.runtimeError(error);
-        }
-    }
 
     // lets the expression route itself to the correct expression type using accept()
     public Object evaluate(Expr expr) {

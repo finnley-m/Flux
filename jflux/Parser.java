@@ -1,5 +1,6 @@
 package jflux;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static jflux.TokenType.*;
@@ -18,15 +19,31 @@ public class Parser {
         this.tokens = tokens;
     }
 
-    // parses through the tokens and returns a binary tree for the expression
-    // in terms of the Expr subclasses instead of tokens
-    Expr parse() {
-        try {
-            return expression();
+    List<Stmt> parse() {
+        List<Stmt> statements = new ArrayList<>();
+        while (!isAtEnd()){
+            statements.add(statement());
         }
-        catch (ParseError error) {
-            return null;
-        }
+
+        return statements;
+    }
+
+    private Stmt statement() {
+        if (match(PRINT)) return printStatement();
+
+        return expressionStatement();
+    }
+
+    private Stmt printStatement() {
+        Expr value = expression();
+        consume(SEMICOLON, "Expext ';' after value");
+        return new Stmt.Print(value);
+    }
+
+    private Stmt expressionStatement() {
+        Expr expr = expression();
+        consume(SEMICOLON, "Expect ';' after expression");
+        return new Stmt.Expression(expr);
     }
 
     // simply expands to the equality rule
