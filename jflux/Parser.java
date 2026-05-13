@@ -18,6 +18,18 @@ public class Parser {
         this.tokens = tokens;
     }
 
+    // parses through the tokens and returns a binary tree for the expression
+    // in terms of the Expr subclasses instead of tokens
+    Expr parse() {
+        try {
+            return expression();
+        }
+        catch (ParseError error) {
+            return null;
+        }
+    }
+
+    // simply expands to the equality rule
     private Expr expression() {
         return equality();
     }
@@ -97,10 +109,12 @@ public class Parser {
 
         if(match(LEFT_PAREN)) {
             // match(LEFT_PAREN) consumes the '(' expression() is now the inner of the bracket
-            Expr expr = expression();
-            consume(RIGHT_PAREN, "Expect ')' after expression.");
+            Expr expr = expression(); // gets the inner of the bracket
+            consume(RIGHT_PAREN, "Expect ')' after expression."); // checks and consumes ')'
             return new Expr.Grouping(expr);
         }
+        // no expression given at all
+        throw error(peek(), "Expect expression");
     }
 
     // checks to see if the current token has any of the given types
@@ -115,6 +129,8 @@ public class Parser {
         return false;
     }
 
+    // Checks if current character is of expected type, if so consumes,
+    // else it throws an error with the given message
     private Token consume(TokenType type, String message) {
         if (check(type)) return advance();
 
@@ -125,6 +141,34 @@ public class Parser {
         Flux.error(token, message);
         return new ParseError();
     }
+
+    // after we reach a semicolon, look for the next keyword and resynchronize there
+    private void synchronize() {
+        // skips past the bad token
+        advance();
+
+        while(!isAtEnd()) {
+            // return when we reach the end of the bad statement
+            if (previous().type == SEMICOLON) return; 
+
+            // incase there is a missing smicolon
+            switch(peek().type) {
+                case CLASS:
+                case FUNC:
+                case VAR:
+                case FOR:
+                case IF:
+                case WHILE:
+                case PRINT:
+                case RETURN:
+                    return;
+                default:
+                    break;
+            }   
+
+            advance();
+        }
+     }
 
     // true if current token is of the given type
     private boolean check(TokenType type) {

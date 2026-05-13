@@ -44,7 +44,7 @@ public class Scanner {
         this.source = source;
     }
 
-    List<Token> scanTokens() {
+    public List<Token> scanTokens() {
         while(!isAtEnd()){
             // we are now at the beginning of the next lexeme
             start = current;
