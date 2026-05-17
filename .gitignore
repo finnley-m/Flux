@@ -1,1 +1,26 @@
-‣潃灭汩摥挠慬獳映汩൥⨊挮慬獳਍਍‣潌⁧楦敬਍⸪潬൧ഊ⌊䈠畬䩥映汩獥਍⸪瑣瑸਍਍‣潍楢敬吠潯獬映牯䨠癡⁡䨨䴲⥅਍洮橴琮灭യഊ⌊倠捡慫敧䘠汩獥⌠਍⸪慪൲⨊眮牡਍⸪慮൲⨊攮牡਍⸪楺൰⨊琮牡朮ൺ⨊爮牡਍਍‣楶瑲慵⁬慭档湩⁥牣獡⁨潬獧‬敳⁥瑨灴⼺眯睷樮癡⹡潣⽭湥搯睯汮慯⽤敨灬支牲牯桟瑯灳瑯砮汭਍獨敟牲灟摩പ爊灥慬役楰⩤਍jflux/test_files/
+# Compiled class file
+*.class
+
+# Log file
+*.log
+
+# BlueJ files
+*.ctxt
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Package Files #
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# virtual machine crash logs
+hs_err_pid*
+replay_pid*
+
+jflux/test_files/
