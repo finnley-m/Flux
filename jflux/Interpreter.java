@@ -30,8 +30,43 @@ public class Interpreter implements Expr.Visitor<Object>,
         }
     }
 
+    /**
+     * excuecutes a statement
+     */
     private void excecute(Stmt stmt) {
         stmt.accept(this);
+    }
+
+    /**
+     * excecutes a block of statements in relation to a specific environment(scope)
+     */
+    private void excecuteBlock(List<Stmt> statements, Environment environment) {
+        Environment previous = this.environment;
+        try {
+            // temp set current environment to a new local environment
+            this.environment = environment;
+
+            for (Stmt statement : statements) {
+                excecute(statement);
+            }
+        } finally {
+            // set current environment to what it was before, reinstating the scope.
+            this.environment = previous;
+        }
+    }
+
+    /**
+     * Visits a block statement node.
+     * 
+     * Excecutes all lines in the block and also creates a new local environment with a reference to the parent environment
+     * 
+     * @param stmt block statement
+     * @return null
+     */
+    @Override
+    public Void visitBlockStmt(Stmt.Block stmt) {
+        excecuteBlock(stmt.statements, new Environment(environment));
+        return null;
     }
 
     /**

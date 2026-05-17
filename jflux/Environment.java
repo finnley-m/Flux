@@ -7,6 +7,16 @@ import java.util.Map; // interface
  * Place where variables are stored in a hash map
 */
 public class Environment {
+    final Environment enclosing;
+
+    Environment() {
+        this.enclosing = null;
+    }
+
+    Environment(Environment enclosing) {
+        this.enclosing = enclosing;
+    }
+
     // string -> variable name   object -> actual data
     private final Map<String, Object> values = new HashMap<>();
 
@@ -17,6 +27,8 @@ public class Environment {
         if (values.containsKey(name.lexeme)) {
             return values.get(name.lexeme);
         }
+
+        if(enclosing != null) return enclosing.get(name);
 
         throw new RuntimeError(name, "Undefined Variable '" + name.lexeme + "'.");
     }
@@ -32,6 +44,11 @@ public class Environment {
     void assign(Token name, Object value) {
         if (values.containsKey(name.lexeme)) {
             values.put(name.lexeme, value);
+            return;
+        }
+
+        if(enclosing != null) {
+            enclosing.assign(name, value);
             return;
         }
 

@@ -1,7 +1,0 @@
-var a = 100;
-var b = 50;
-var c = 10;
-
-var c = c + 1;
-
-print c + b + a;
