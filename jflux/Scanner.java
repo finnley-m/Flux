@@ -8,6 +8,9 @@ import java.util.Map;
 // static so we dont have to write TokenType. each time
 import static jflux.TokenType.*;
 
+/**
+ * Scans source text and produces a list of tokens.
+ */
 public class Scanner {
     private final String source;
     private final List<Token> tokens = new ArrayList<>();
@@ -40,10 +43,20 @@ public class Scanner {
     private int current = 0; // current pointer of character in the lexeme
     private int line    = 1; // current line number we are at
 
+    /**
+     * Creates a scanner for the given source text.
+     *
+     * @param source text to scan
+     */
     Scanner(String source) {
         this.source = source;
     }
 
+    /**
+     * Scans the entire source and returns the token list.
+     *
+     * @return list of tokens
+     */
     public List<Token> scanTokens() {
         while(!isAtEnd()){
             // we are now at the beginning of the next lexeme
@@ -56,6 +69,9 @@ public class Scanner {
         return tokens;
     }
 
+    /**
+     * Scans the next lexeme and adds a token.
+     */
     private void scanToken() {
         char c = advance();
         switch (c) {
@@ -129,6 +145,9 @@ public class Scanner {
         }
     }
 
+    /**
+     * Scans a string literal.
+     */
     private void string() {
         while( peek() != '"' && !isAtEnd()) {
             if(peek() == '\n') line++;
@@ -147,6 +166,9 @@ public class Scanner {
         addToken(STRING, value);
     }
 
+    /**
+     * Scans an identifier or keyword.
+     */
     private void identifier() {
         while (isAlphaNumeric(peek())) advance();
 
@@ -156,6 +178,12 @@ public class Scanner {
         addToken(type);
     }
 
+    /**
+     * Conditionally consumes the next character if it matches.
+     *
+     * @param expected expected character
+     * @return true if consumed
+     */
     private boolean match(char expected){
         if (isAtEnd()) return false;
         if (source.charAt(current) != expected) return false;
@@ -164,20 +192,41 @@ public class Scanner {
         return true;
     }
 
+    /**
+     * Checks whether a character is alphabetic or numeric.
+     *
+     * @param c character to test
+     * @return true if alphanumeric
+     */
     private boolean isAlphaNumeric(char c) {
         return isAlpha(c) || isDigit(c);
     }
 
+    /**
+     * Checks whether a character is alphabetic or underscore.
+     *
+     * @param c character to test
+     * @return true if alphabetic
+     */
     private boolean isAlpha(char c) {
         return  (c >= 'a' && c <= 'z') ||
                 (c >= 'A' && c <= 'Z') ||
                 (c == '_');
     }
 
+    /**
+     * Checks whether a character is a digit.
+     *
+     * @param c character to test
+     * @return true if digit
+     */
     private boolean isDigit(char c) {
         return c >= '0' && c <= '9';
     }
 
+    /**
+     * Scans a numeric literal.
+     */
     private void number() {
         // while the next character is a number, advance
         while (isDigit(peek())) advance();
@@ -194,30 +243,61 @@ public class Scanner {
             Double.parseDouble(source.substring(start, current)));
     }
 
+    /**
+     * Peeks one character ahead without consuming it.
+     *
+     * @return next character or '\0' at end
+     */
     private char peekNext() { // peek twice into future to see after dp
         if (current + 1 >= source.length()) return '\0';
         return source.charAt(current + 1);
     }
 
+    /**
+     * Consumes the next character and returns it.
+     *
+     * @return consumed character
+     */
     private char advance() {
         current++;
         return source.charAt(current - 1);
     }
 
+    /**
+     * Peeks the current character without consuming it.
+     *
+     * @return current character or '\0' at end
+     */
     private char peek() {
         if (isAtEnd()) return '\0';
         return source.charAt(current);
     }
 
+    /**
+     * Adds a token with no literal value.
+     *
+     * @param type token type
+     */
     private void addToken(TokenType type) {
         addToken(type, null);
     }
 
+    /**
+     * Adds a token with an optional literal value.
+     *
+     * @param type token type
+     * @param literal literal value
+     */
     private void addToken(TokenType type, Object literal) {
         String text = source.substring(start, current);
         tokens.add(new Token(type, text, literal, line));
     }
 
+    /**
+     * Checks whether the end of the source has been reached.
+     *
+     * @return true if at end of source
+     */
     private boolean isAtEnd() {
         return current >= source.length();
     }

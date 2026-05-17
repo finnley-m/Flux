@@ -1,5 +1,8 @@
 package jflux;
 
+/**
+ * Represents a lexical token produced by the scanner.
+ */
 public class Token {
     // final is the same as const
     final TokenType type;
@@ -15,6 +18,11 @@ public class Token {
     }
 
     // overide for the built in toString so we can print it     
+    /**
+     * Returns a string representation of the token.
+     *
+     * @return token text
+     */
     public String toString() {
         return type + " " + lexeme + " " + literal;
     }

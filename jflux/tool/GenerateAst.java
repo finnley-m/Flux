@@ -5,7 +5,16 @@ import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Utility to generate AST node classes for Flux.
+ */
 public class GenerateAst {
+    /**
+     * Generates AST classes from a list of type definitions.
+     *
+     * @param args output directory
+     * @throws IOException if file writing fails
+     */
     public static void main(String[] args) throws IOException {
     if (args.length != 1) {
         System.err.println("Usage: generate_ast <output directory>");
@@ -13,17 +22,28 @@ public class GenerateAst {
     }
     String outputDir = args[0];
     defineAst(outputDir, "Expr", Arrays.asList(
-    "Binary : Expr left, Token operator, Expr right",
+   "Assign  : Token name, Expr value",
+        "Binary   : Expr left, Token operator, Expr right",
         "Grouping : Expr expression",
-        "Literal : Object value",
-        "Unary : Token operator, Expr right"
+        "Literal  : Object value",
+        "Unary    : Token operator, Expr right",
+        "Variable : Token name"
     ));
     defineAst(outputDir, "Stmt", Arrays.asList(
   "Expression : Expr expression",
-        "Print : Expr expression"
+        "Print      : Expr expression",
+        "Var        : Token name, Expr initializer"
     ));
     } 
 
+    /**
+     * Writes a base AST class and its subclasses to disk.
+     *
+     * @param outputDir directory for generated files
+     * @param baseName base class name
+     * @param types subclass definitions
+     * @throws IOException if writing fails
+     */
     private static void defineAst(String outputDir,
                               String baseName,  // name of the base class being generated
                               List<String> types) throws IOException {
@@ -54,6 +74,14 @@ public class GenerateAst {
         writer.close();
     }
     
+    /**
+     * Writes one AST subclass definition.
+     *
+     * @param writer output writer
+     * @param baseName AST base class name
+     * @param className subclass name
+     * @param fieldList constructor fields
+     */
     private static void defineType(PrintWriter writer,
                                    String baseName,
                                    String className,
@@ -99,6 +127,13 @@ public class GenerateAst {
     Binary.accept calls visitor.visitBinary(this)
     Interpreter.visitBinary evaluates left and right sides and applies the evaluation
     */
+    /**
+     * Writes the visitor interface for the AST base class.
+     *
+     * @param writer output writer
+     * @param baseName AST base class name
+     * @param types subclass definitions
+     */
     private static void defineVisitor(PrintWriter writer, String baseName, List<String> types) {
         // <R> means the visitor can return any type. R stands for return type
         writer.println("\tinterface Visitor<R> {");
