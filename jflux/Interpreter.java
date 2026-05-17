@@ -15,6 +15,8 @@ public class Interpreter implements Expr.Visitor<Object>,
     // variables stay in memory as long as the interpreter is running
     private Environment environment = new Environment();
     
+    public boolean isRepl = false;
+
     /**
      * Evaluates the given expression and prints the result.
      *
@@ -77,7 +79,8 @@ public class Interpreter implements Expr.Visitor<Object>,
      */
     @Override
     public Void visitExpressionStmt(Stmt.Expression stmt) {
-        evaluate(stmt.expression);
+        Object value = evaluate(stmt.expression);
+        if(isRepl) System.out.println(value);
         return null;
     }
     

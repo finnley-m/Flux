@@ -83,6 +83,7 @@ public class Flux{
      * @throws IOException if reading from stdin fails
      */
     private static void runPrompt() throws IOException {
+        interpreter.isRepl = true;
         // get our input stream from the terminal(System.in)
         InputStreamReader input = new InputStreamReader(System.in);
         // puts multiple characters into a buffer which is faster than constantly 
