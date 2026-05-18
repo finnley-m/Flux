@@ -80,10 +80,31 @@ public class Interpreter implements Expr.Visitor<Object>,
     @Override
     public Void visitExpressionStmt(Stmt.Expression stmt) {
         Object value = evaluate(stmt.expression);
-        if(isRepl) System.out.println(value);
+        if(isRepl) System.out.println(value); // TODO FIX SO IT IS ONLY PRINTED IF ITS A STANDALONE EXPRESSION IF PROBLEM
         return null;
     }
-    
+
+    /**
+     * Logic for if statements
+     */
+    @Override
+    public Void visitIfStmt(Stmt.If stmt) {
+        if (isTruthy(evaluate(stmt.condition))) {
+            excecute(stmt.thenBranch);
+        } else if(stmt.elseBranch != null) {
+            excecute(stmt.elseBranch);
+        }
+        return null;
+    }
+
+    @Override
+    public Void visitWhileStmt(Stmt.While stmt) {
+        while(isTruthy(evaluate(stmt.condition))) {
+            excecute(stmt.body);
+        }
+        return null;
+    }
+
     /**
      * Visits a print statement node.
      */
@@ -135,6 +156,20 @@ public class Interpreter implements Expr.Visitor<Object>,
     @Override
     public Object visitLiteralExpr(Expr.Literal expr) {
         return expr.value;
+    }
+
+    @Override
+    public Object visitLogicalExpr(Expr.Logical expr) {
+        Object left = evaluate(expr.left);
+
+        if (expr.operator.type == TokenType.OR) {
+            if(isTruthy(left)) return left;
+        } else { // and
+            // left false to return false
+            if (!isTruthy(left)) return left;
+        }
+
+        return evaluate(expr.right);
     }
 
     /**

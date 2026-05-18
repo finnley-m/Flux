@@ -1,6 +1,7 @@
 package jflux;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static jflux.TokenType.*;
@@ -61,12 +62,82 @@ public class Parser {
      * @return parsed statement node
      */
     private Stmt statement() {
-        if (match(PRINT)) return printStatement();
+        if (match(IF))         return ifStatement(); 
+        if (match(PRINT))      return printStatement();
+        if (match(FOR))        return forStatement();
+        if (match(WHILE))      return whileStatement();
         if (match(LEFT_BRACE)) return new Stmt.Block(block());
 
         return expressionStatement();
     }
 
+    private Stmt ifStatement() {
+        consume(LEFT_PAREN, "Expect a '(' after 'if'");
+        // the if condition we evaluate to be true or false
+        Expr condition = expression();
+        consume(RIGHT_PAREN, "Expect a ')' after if condition");
+
+        // branch becomes the single next statement. If a block is there the "statement" is the whole code block
+        Stmt thenBranch = statement();
+        Stmt elseBranch = null;
+
+        // else branch belongs to most recent if always.
+        if(match(ELSE)) { // else not required
+            elseBranch = statement();
+        }
+
+        return new Stmt.If(condition, thenBranch, elseBranch);
+    }
+
+    private Stmt forStatement() {
+        consume(LEFT_PAREN, "Expect a '(' after 'for'");
+
+        Stmt initializer;
+        if (match(SEMICOLON)) { // no initialiser
+            initializer = null;
+        } else if (match(VAR)) { // if we are declaring the iterator
+            initializer = varDeclaration();
+        } else { // if we are reusing an old variable as the iterator
+            initializer = expressionStatement();
+        }
+
+        Expr condition = null;
+        if (!check(SEMICOLON)) { // if expression given, use it as the condition
+            condition = expression();
+        }
+        consume(SEMICOLON, "Expect a ; after loop condition");
+
+        Expr increment = null;
+        if(!check(SEMICOLON)) {
+            increment = expression();
+        }
+        consume(RIGHT_PAREN, "Expect a ')' after if clauses");
+
+        Stmt body = statement();
+
+        // if we have an increment, make a block with the increment at the end, which we will put into a while loop
+        if (increment != null) {
+            body = new Stmt.Block(
+                Arrays.asList(
+                    body,
+                    new Stmt.Expression(increment)
+                )
+            );
+        }
+
+        if (condition == null) condition = new Expr.Literal(true);
+
+        return body;
+    }
+
+    private Stmt whileStatement() {
+        consume(LEFT_PAREN, "Expect a '(' after 'while'");
+        Expr condition = expression();
+        consume(RIGHT_PAREN, "Expect a ')' after while condition");
+        Stmt body = statement();
+
+        return new Stmt.While(condition, body);
+    }
 
     /**
      * Parses an expression statement.
@@ -105,7 +176,7 @@ public class Parser {
      */
     private Expr assignment() {
         // assume left side is an expression
-        Expr expr = equality();
+        Expr expr = or();
 
         // finds an = so we now know its assignment
         if(match(EQUAL)) {
@@ -120,6 +191,30 @@ public class Parser {
 
             // if left side of equals sign is not a variable, report error
             error(equals, "Invalid assignment target");
+        }
+
+        return expr;
+    }
+
+    private Expr or() {
+        Expr expr = and(); // left side expr
+
+        while(match(OR)) {
+            Token operator = previous();
+            Expr right = and(); // right side expr
+            expr = new Expr.Logical(expr, operator, right);
+        }
+
+        return expr;
+    }
+
+    private Expr and() {
+        Expr expr = equality();
+
+        while(match(AND)) {
+            Token operator = previous();
+            Expr right = equality();
+            expr = new Expr.Logical(expr, operator, right);
         }
 
         return expr;
