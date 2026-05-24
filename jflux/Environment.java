@@ -41,6 +41,24 @@ public class Environment {
         values.put(name, object);
     }
 
+    Object getAt(int distance, String name) {
+        // gets the value of the ancestor that distance away
+        return ancestor(distance).values.get(name);
+    }
+
+    void assignAt(int distance, Token name, Object value) {
+        ancestor(distance).values.put(name.lexeme, value);
+    }
+
+    Environment ancestor(int distance) {
+        Environment environment = this;
+        for (int i = 0; i < distance; i++) {
+            environment = environment.enclosing;
+        }
+
+        return environment;
+    }
+
     void assign(Token name, Object value) {
         if (values.containsKey(name.lexeme)) {
             values.put(name.lexeme, value);

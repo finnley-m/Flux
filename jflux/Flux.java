@@ -121,6 +121,13 @@ public class Flux{
         
         // stop if there was a syntax error
         if(hadError) return;
+        
+        // run the resolver to get the distance of all variables in the program
+        Resolver resolver = new Resolver(interpreter);
+        resolver.resolve(statements);
+
+        // stop if there was an error resolving
+        if(hadError) return;
 
         // evauluate expression using interpreter
         interpreter.interpret(statements);

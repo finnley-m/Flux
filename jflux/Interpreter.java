@@ -2,6 +2,8 @@ package jflux;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
 
 import static jflux.TokenType.*;
 
@@ -16,6 +18,7 @@ public class Interpreter implements Expr.Visitor<Object>,
     // variables stay in memory as long as the interpreter is running
     final Environment globals = new Environment();
     private Environment environment = globals;
+    private final Map<Expr, Integer> locals = new HashMap<>();
     
     public boolean isRepl = false;
 
@@ -56,6 +59,14 @@ public class Interpreter implements Expr.Visitor<Object>,
      */
     private void excecute(Stmt stmt) {
         stmt.accept(this);
+    }
+
+    /**
+     * Figure out how many hops away the variables we access at runtime are before runtime
+     * Turns variable scope lookup from O(n) to O(1)
+     */
+    public void resolve(Expr expr, int depth) {
+        locals.put(expr, depth);
     }
 
     /**
@@ -168,7 +179,19 @@ public class Interpreter implements Expr.Visitor<Object>,
      */
     @Override
     public Object visitVariableExpr(Expr.Variable expr) {
-        return environment.get(expr.name);
+        // look up scope of variable and find it within that scope
+        return lookUpVariable(expr.name, expr);
+    }
+
+    private Object lookUpVariable(Token name, Expr expr) {
+        Integer distance = locals.get(expr);
+        if (distance != null) {
+            // get variable stored at environment at said distance away
+            return environment.getAt(distance, name.lexeme);
+        } else { // no distance given therefore must be in globals
+            // runtime error thrown anyway if it isnt defined
+            return globals.get(name);
+        }
     }
 
     /**
@@ -177,7 +200,14 @@ public class Interpreter implements Expr.Visitor<Object>,
     @Override
     public Object visitAssignExpr(Expr.Assign expr) {
         Object value = evaluate(expr.value);
-        environment.assign(expr.name, value);
+        
+        Integer distance = locals.get(expr);
+        if (distance != null) {
+            environment.assignAt(distance, expr.name, value);
+        } else {
+            globals.assign(expr.name, value);
+        }
+
         return value;
     }
 
