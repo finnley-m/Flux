@@ -47,7 +47,8 @@ public class Parser {
 
     private Stmt declaration() {
         try{
-            if (match(VAR)) return varDeclaration();
+            if (match(FUNC)) return function("function"); 
+            if (match(VAR))  return varDeclaration();
 
             return statement();
         } catch(ParseError error) { // if fails parsing, resynchronize at nect statement
@@ -64,6 +65,7 @@ public class Parser {
     private Stmt statement() {
         if (match(IF))         return ifStatement(); 
         if (match(PRINT))      return printStatement();
+        if (match(RETURN))     return returnStatement();
         if (match(FOR))        return forStatement();
         if (match(WHILE))      return whileStatement();
         if (match(LEFT_BRACE)) return new Stmt.Block(block());
@@ -87,6 +89,17 @@ public class Parser {
         }
 
         return new Stmt.If(condition, thenBranch, elseBranch);
+    }
+
+    private Stmt returnStatement() {
+        Token keyword = previous(); // stores line number for error reporting
+        Expr value = null;
+        if (!check(SEMICOLON)) {
+            value = expression();
+        }
+
+        consume(SEMICOLON, "Expext ';' after value.");
+        return new Stmt.Return(keyword, value);
     }
 
     private Stmt forStatement() {
@@ -126,7 +139,12 @@ public class Parser {
         }
 
         if (condition == null) condition = new Expr.Literal(true);
+        body = new Stmt.While(condition, body); // put the while loop for the for loop in the block
 
+        if(initializer != null) { // if we have an initializer put it at the start of the block
+            body = new Stmt.Block(Arrays.asList(initializer, body));
+        }
+        // TODO add break and continue keywords
         return body;
     }
 
@@ -307,8 +325,40 @@ public class Parser {
             return new Expr.Unary(operator, right);
         }
 
-        return primary();
+        return call();
     }
+
+    private Expr finishCall(Expr callee) {
+        List<Expr> arguments = new ArrayList<>();
+
+        if(!check(RIGHT_PAREN)) // closing paren
+        {
+            do {
+                if (arguments.size() >= 255) {
+                    error(peek(), "cant have more than 255 arguments");
+                }
+                arguments.add(expression());
+            } while (match(COMMA)); // if no match for a comme, then it must have been last arg
+        }
+
+        Token paren = consume(RIGHT_PAREN, "Expext a ')' after the arguments");
+
+        return new Expr.Call(callee, paren, arguments);
+    }
+
+    private Expr call() {
+        Expr expr = primary();
+
+        while(true) { // check for chained calls
+            if (match(LEFT_PAREN)) { // opening paren
+                expr = finishCall(expr); // make an expression reprersenting the function call
+            } else {
+                break;
+            }
+        }
+
+        return expr;
+    } 
 
     //primary → NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")"
     /**
@@ -362,6 +412,34 @@ public class Parser {
         consume(SEMICOLON, "Expext ';' after variable declaration");
         return new Stmt.Var(name, initializer);
     }
+
+    /**
+     * parses a function declaration statement
+     * 
+     * @param kind to differentiate between if the function is a normal function or method
+     */
+    private Stmt.Function function(String kind) {
+        // FUNCTION NAME AND PARAMETER DECLARATION
+        // scan for a name for the function
+        Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
+        consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
+        List<Token> parameters = new ArrayList<>();
+        if (!check(RIGHT_PAREN)) { // check if the next token is not a RIGHT_PAREN => have parameters
+            do {
+                if (parameters.size() >= 255) {
+                    error(peek(), "Cant have more than 255 parameters");
+                }
+
+                parameters.add(consume(IDENTIFIER, "Expect parameter name."));
+            } while (match(COMMA)); // while more parameters
+        }
+        consume(RIGHT_PAREN, "Expect a ')' after parameters");
+
+        // FUNCTION BODY DECLARATION
+        consume(LEFT_BRACE, "Expect a  '{' before " + kind + " body."); // block doesnt check for '{'
+        List<Stmt> body = block();
+        return new Stmt.Function(name, parameters, body);
+    }  
 
     // checks to see if the current token has any of the given types
     /**

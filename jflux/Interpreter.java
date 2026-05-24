@@ -1,6 +1,7 @@
 package jflux;
 
 import java.util.List;
+import java.util.ArrayList;
 
 import static jflux.TokenType.*;
 
@@ -13,9 +14,27 @@ public class Interpreter implements Expr.Visitor<Object>,
                                     Stmt.Visitor<Void> {
     
     // variables stay in memory as long as the interpreter is running
-    private Environment environment = new Environment();
+    final Environment globals = new Environment();
+    private Environment environment = globals;
     
     public boolean isRepl = false;
+
+    // TODO TEMP NATIVE FUNCTION, MOVE LATER TO AN FFI
+    Interpreter() {
+        globals.define("clock", new FluxCallable() {
+            @Override
+            public int arity() {return 0;}
+
+            @Override
+            public Object call(Interpreter interpreter,
+                               List<Object> arguments) {
+                return (double)System.currentTimeMillis() / 1000.0;
+            }
+
+            @Override
+            public String toString() { return "<native fn>"; }
+            });
+        };
 
     /**
      * Evaluates the given expression and prints the result.
@@ -42,7 +61,7 @@ public class Interpreter implements Expr.Visitor<Object>,
     /**
      * excecutes a block of statements in relation to a specific environment(scope)
      */
-    private void excecuteBlock(List<Stmt> statements, Environment environment) {
+    public void excecuteBlock(List<Stmt> statements, Environment environment) {
         Environment previous = this.environment;
         try {
             // temp set current environment to a new local environment
@@ -84,6 +103,13 @@ public class Interpreter implements Expr.Visitor<Object>,
         return null;
     }
 
+    @Override
+    public Void visitFunctionStmt(Stmt.Function stmt) {
+        FluxFunction function = new FluxFunction(stmt, environment);
+        environment.define(stmt.name.lexeme, function); 
+        return null;
+    }
+
     /**
      * Logic for if statements
      */
@@ -113,6 +139,14 @@ public class Interpreter implements Expr.Visitor<Object>,
         Object value = evaluate(stmt.expression);
         System.out.println(stringify(value));
         return null;
+    }
+
+    @Override
+    public Void visitReturnStmt(Stmt.Return stmt) {
+        Object value = null;
+        if(stmt.value != null) value = evaluate(stmt.value);
+
+        throw new Return(value);
     }
 
     /**
@@ -264,6 +298,29 @@ public class Interpreter implements Expr.Visitor<Object>,
         }
     }
 
+    public Object visitCallExpr(Expr.Call expr) {
+        // looks up function name in environmentand returns the object of it
+        Object callee = evaluate(expr.callee);
+
+        List<Object> arguments = new ArrayList<>();
+        for (Expr argument : expr.arguments) {
+            arguments.add(evaluate(argument));
+        }
+
+        if(!(callee instanceof FluxCallable)) {
+            throw new RuntimeError(expr.paren, "Can only call functions and classes");
+        }
+        FluxCallable function = (FluxCallable)callee;
+
+        // check argument size given
+        if(arguments.size() != function.arity()) {
+            throw new RuntimeError(expr.paren, "Expected " + function.arity() + " arguments, but got "
+                                                + arguments.size() + ".");
+        }
+
+        // reference to interpreter so the funciton can excecute its body
+        return function.call(this, arguments);
+    }
 
     // lets the expression route itself to the correct expression type using accept()
     /**

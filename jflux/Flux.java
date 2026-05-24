@@ -110,7 +110,7 @@ public class Flux{
      *
      * @param source source code text
      */
-    private static void run(String source) {
+    public static void run(String source) {
         // scan source text to create tokens
         Scanner scanner    = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
