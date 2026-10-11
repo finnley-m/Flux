@@ -8,15 +8,13 @@ int main(int argc, char *argv[]) {
 
     Chunk chunk;
     initChunk(&chunk);
-    int constant = addConstant(&chunk, 1.2);
-    writeChunk(&chunk, OP_CONSTANT, 1);
-    writeChunk(&chunk, constant, 1);
-    writeChunk(&chunk, OP_RETURN, 1);
-    writeChunk(&chunk, OP_RETURN, 2);
-    writeChunk(&chunk, OP_RETURN, 3);
+
+    for(int i = 0; i < 1000; i++) {
+        writeConstant(&chunk, i/3, i);
+    }
     writeChunk(&chunk, OP_RETURN, 3);
 
-    dissasembleChunk(&chunk, "test chunk");
+    //dissasembleChunk(&chunk, "test chunk");
 
     interpret(&chunk);
     freeVM();

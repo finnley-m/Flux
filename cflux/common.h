@@ -9,3 +9,5 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+#define DEBUG_TRACE_EXCECUTION
