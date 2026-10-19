@@ -5,9 +5,11 @@
 #pragma once
 
 #include <stdint.h>
+#include <string.h>
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 
-#define DEBUG_TRACE_EXCECUTION
+// comment out to turn off
+//#define DEBUG_TRACE_EXCECUTION
