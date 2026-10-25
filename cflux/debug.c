@@ -72,5 +72,5 @@ static int longConstantInstruction(const char* name, Chunk* chunk, int offset) {
 }
 
 void printValue(Value value) {
-    printf("%f", value); 
+    printf("%.14g", value); 
 }

@@ -15,6 +15,10 @@ void initScanner(const char* source) {
     scanner.line    = 1;
 }
 
+static char peek() {
+    return *scanner.current;
+}
+
 static bool isAtEnd() {
     return peek() == '\0';
 }
@@ -42,10 +46,6 @@ static char advance() {
     return scanner.current[-1];
 }
 
-static char peek() {
-    return *scanner.current;
-}
-
 static char peekNext() {
     if (isAtEnd()) return '\0';
     return scanner.current[1];
@@ -60,7 +60,7 @@ static bool match(char expected) {
 }
 
 static bool isDigit(char c) {
-    return c >= '0' && c <= 9;
+    return c >= '0' && c <= '9';
 }
 
 static bool isAlpha(char c) {

@@ -61,7 +61,7 @@ void writeConstant(Chunk* chunk, Value value, int line) {
      else{ // use OP_CONSTANT_LONG
         uint8_t b1 = constantIndex >> 16;
         uint8_t b2 = constantIndex >> 8;
-        uint8_t b3 = constantIndex;       
+        uint8_t b3 = constantIndex;
         writeChunk(chunk, OP_CONSTANT_LONG, line);
         writeChunk(chunk, b1, line);
         writeChunk(chunk, b2, line);
