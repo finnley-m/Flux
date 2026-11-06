@@ -133,12 +133,22 @@ static void binary() {
 
     // emit the operator instruction
     switch (operatorType) {
-        case TOKEN_PLUS:     emitByte(OP_ADD); break;
-        case TOKEN_MINUS:    emitByte(OP_SUBTRACT); break;
-        case TOKEN_STAR:     emitByte(OP_MULTIPLY); break;
-        case TOKEN_SLASH:    emitByte(OP_DIVIDE); break;
+        case TOKEN_BANG:    emitByte(OP_NOT); break;
+        case TOKEN_PLUS:    emitByte(OP_ADD); break;
+        case TOKEN_MINUS:   emitByte(OP_SUBTRACT); break;
+        case TOKEN_STAR:    emitByte(OP_MULTIPLY); break;
+        case TOKEN_SLASH:   emitByte(OP_DIVIDE); break;
         default:
             return; // Unreachable
+    }
+}
+
+static void literal() {
+    switch(parser.previous.type) {
+        case TOKEN_FALSE: emitByte(OP_FALSE); break;
+        case TOKEN_TRUE: emitByte(OP_TRUE); break;
+        case TOKEN_NULL: emitByte(OP_NULL); break;
+        default: return;
     }
 }
 
@@ -149,7 +159,7 @@ static void grouping() {
 
 static void number() {
     double value = strtod(parser.previous.start, NULL); // string to double
-    emitConstant(value);
+    emitConstant(NUMBER_VAL(value));
 }
 
 static void unary() {
@@ -160,10 +170,12 @@ static void unary() {
     
     switch(operatorType) {
         case TOKEN_MINUS: emitByte(OP_NEGATE); break;
+        case TOKEN_BANG:  emitByte(OP_NOT); break;
         default: return;
     }
 }
-
+// A lookup table mapping every token type
+// to its prefix parse function, infix parse function, and precedence level.
 ParseRule rules[] = {
     [TOKEN_LEFT_PAREN]      = {grouping, NULL, PREC_NONE},
     [TOKEN_RIGHT_PAREN]     = {NULL, NULL, PREC_NONE},
@@ -176,7 +188,7 @@ ParseRule rules[] = {
     [TOKEN_SEMICOLON]       = {NULL, NULL, PREC_NONE},
     [TOKEN_SLASH]           = {NULL, binary, PREC_FACTOR},
     [TOKEN_STAR]            = {NULL, binary, PREC_FACTOR},
-    [TOKEN_BANG]            = {NULL, NULL, PREC_NONE},
+    [TOKEN_BANG]            = {unary, NULL, PREC_NONE},
     [TOKEN_BANG_EQUAL]      = {NULL, NULL, PREC_NONE},
     [TOKEN_EQUAL]           = {NULL, NULL, PREC_NONE},
     [TOKEN_EQUAL_EQUAL]     = {NULL, NULL, PREC_NONE},
@@ -190,17 +202,17 @@ ParseRule rules[] = {
     [TOKEN_AND]             = {NULL, NULL, PREC_NONE},
     [TOKEN_CLASS]           = {NULL, NULL, PREC_NONE},
     [TOKEN_ELSE]            = {NULL, NULL, PREC_NONE},
-    [TOKEN_FALSE]           = {NULL, NULL, PREC_NONE},
+    [TOKEN_FALSE]           = {literal, NULL, PREC_NONE},
     [TOKEN_FOR]             = {NULL, NULL, PREC_NONE},
     [TOKEN_FUNC]            = {NULL, NULL, PREC_NONE},
     [TOKEN_IF]              = {NULL, NULL, PREC_NONE},
-    [TOKEN_NULL]            = {NULL, NULL, PREC_NONE},
+    [TOKEN_NULL]            = {literal, NULL, PREC_NONE},
     [TOKEN_OR]              = {NULL, NULL, PREC_NONE},
     [TOKEN_PRINT]           = {NULL, NULL, PREC_NONE},
     [TOKEN_RETURN]          = {NULL, NULL, PREC_NONE},
     [TOKEN_SUPER]           = {NULL, NULL, PREC_NONE},
     [TOKEN_THIS]            = {NULL, NULL, PREC_NONE},
-    [TOKEN_TRUE]            = {NULL, NULL, PREC_NONE},
+    [TOKEN_TRUE]            = {literal, NULL, PREC_NONE},
     [TOKEN_VAR]             = {NULL, NULL, PREC_NONE},
     [TOKEN_WHILE]           = {NULL, NULL, PREC_NONE},
     [TOKEN_ERROR]           = {NULL, NULL, PREC_NONE},
@@ -243,7 +255,7 @@ bool compile(const char* source, Chunk* chunk) {
     parser.panicMode = false;
 
     advance(); // primes the parser and loads first token
-    expression();
+    expression(); // compile the given expression
     consume(TOKEN_EOF, "Expect end of expression.");
     endCompiler();
     return !parser.hadError;

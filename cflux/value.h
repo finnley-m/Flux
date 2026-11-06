@@ -1,9 +1,34 @@
 #pragma once
 
-typedef double Value;
+#include "common.h"
+
+typedef enum {
+    VAL_BOOL,
+    VAL_NULL,
+    VAL_NUMBER
+} ValueType;
+
+typedef  struct {
+    ValueType type;
+    union{
+        bool boolean;
+        double number;
+    } as;
+} Value;
+// check type easily
+#define IS_BOOL(value)  ((value).type == VAL_BOOL)
+#define IS_NUMBER(value)  ((value).type == VAL_NUMBER)
+#define IS_NULL(value)  ((value).type == VAL_NULL)
+// unwrap to the correct static c value
+#define AS_BOOL(value)      ((value).as.boolean)
+#define AS_NUMBER(value)    ((value).as.number)
+// wrap to the dynamic value
+#define BOOL_VAL(value)     ((Value){VAL_BOOL, {.boolean = value}})
+#define NUMBER_VAL(value)   ((Value){VAL_NUMBER, {.number = value}})
+#define NULL_VAL            ((Value){VAL_NULL, {.number = 0}})
 
 typedef struct {
-    int count;
+    int count; 
     int capacity;
     Value* values; 
 } ValueArray;

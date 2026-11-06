@@ -28,6 +28,12 @@ int dissasembleInstruction(Chunk* chunk, int offset) {
             return constantInstruction("OP_CONSTANT", chunk, offset);
         case OP_CONSTANT_LONG:
             return longConstantInstruction("OP_CONSTANT_LONG", chunk, offset);
+        case OP_NULL:
+            return simpleInstruction("OP_NULL", offset);
+        case OP_TRUE:
+            return simpleInstruction("OP_TRUE", offset);
+        case OP_FALSE:
+            return simpleInstruction("OP_FALSE", offset);
         case OP_ADD:
             return simpleInstruction("OP_ADD", offset);
         case OP_SUBTRACT:
@@ -36,6 +42,8 @@ int dissasembleInstruction(Chunk* chunk, int offset) {
             return simpleInstruction("OP_MULTIPLY", offset);
         case OP_DIVIDE:
             return simpleInstruction("OP_DIVIDE", offset);
+        case OP_NOT:
+            return simpleInstruction("OP_NOT", offset);
         case OP_NEGATE:
             return simpleInstruction("OP_NEGATE", offset);
         case OP_RETURN:
@@ -72,5 +80,9 @@ static int longConstantInstruction(const char* name, Chunk* chunk, int offset) {
 }
 
 void printValue(Value value) {
-    printf("%.14g", value); 
+    switch(value.type) {
+        case VAL_BOOL:      printf(AS_BOOL(value) ? "true" : "false"); break;
+        case VAL_NUMBER:    printf("%.14g", AS_NUMBER(value)); break;
+        case VAL_NULL:      printf("null"); break;
+    }
 }
