@@ -127,17 +127,25 @@ static void binary() {
     // Remember operator type
     TokenType operatorType = parser.previous.type;
 
-    // compile the right operand
+    // compile the right operand if binds tighter than current
+    // -> +1 gives left assiciativity
     ParseRule* rule = getRule(operatorType);
     parsePrecedence((Precedence)(rule->precedence+1));
 
     // emit the operator instruction
     switch (operatorType) {
-        case TOKEN_BANG:    emitByte(OP_NOT); break;
-        case TOKEN_PLUS:    emitByte(OP_ADD); break;
-        case TOKEN_MINUS:   emitByte(OP_SUBTRACT); break;
-        case TOKEN_STAR:    emitByte(OP_MULTIPLY); break;
-        case TOKEN_SLASH:   emitByte(OP_DIVIDE); break;
+        // logic
+        case TOKEN_BANG_EQUAL:      emitBytes(OP_EQUAL, OP_NOT); break;
+        case TOKEN_EQUAL_EQUAL:     emitByte(OP_EQUAL); break;
+        case TOKEN_GREATER:         emitByte(OP_GREATER); break;
+        case TOKEN_GREATER_EQUAL:   emitBytes(OP_LESS, OP_NOT); break; // contrapositive
+        case TOKEN_LESS:            emitByte(OP_LESS); break;
+        case TOKEN_LESS_EQUAL:      emitBytes(OP_GREATER, OP_NOT); break; // contrapositive
+        // arithmetic
+        case TOKEN_PLUS:            emitByte(OP_ADD); break;
+        case TOKEN_MINUS:           emitByte(OP_SUBTRACT); break;
+        case TOKEN_STAR:            emitByte(OP_MULTIPLY); break;
+        case TOKEN_SLASH:           emitByte(OP_DIVIDE); break;
         default:
             return; // Unreachable
     }
@@ -156,10 +164,15 @@ static void grouping() {
     expression();
     consume(TOKEN_RIGHT_PAREN, "expect ')' after expression");
 }
-
+// if number just add it to the stack
 static void number() {
     double value = strtod(parser.previous.start, NULL); // string to double
     emitConstant(NUMBER_VAL(value));
+}
+
+static void string() {
+    // + 1 and -2 get rid of the quotations
+    emitConstant(OBJ_VAL(copyString(parser.previous.start + 1, parser.previous.length - 2)));
 }
 
 static void unary() {
@@ -189,15 +202,15 @@ ParseRule rules[] = {
     [TOKEN_SLASH]           = {NULL, binary, PREC_FACTOR},
     [TOKEN_STAR]            = {NULL, binary, PREC_FACTOR},
     [TOKEN_BANG]            = {unary, NULL, PREC_NONE},
-    [TOKEN_BANG_EQUAL]      = {NULL, NULL, PREC_NONE},
+    [TOKEN_BANG_EQUAL]      = {NULL, binary, PREC_EQUALITY},
     [TOKEN_EQUAL]           = {NULL, NULL, PREC_NONE},
-    [TOKEN_EQUAL_EQUAL]     = {NULL, NULL, PREC_NONE},
-    [TOKEN_GREATER]         = {NULL, NULL, PREC_NONE},
-    [TOKEN_GREATER_EQUAL]   = {NULL, NULL, PREC_NONE},
-    [TOKEN_LESS]            = {NULL, NULL, PREC_NONE},
-    [TOKEN_LESS_EQUAL]      = {NULL, NULL, PREC_NONE},
+    [TOKEN_EQUAL_EQUAL]     = {NULL, binary, PREC_EQUALITY},
+    [TOKEN_GREATER]         = {NULL, binary, PREC_COMPARISON},
+    [TOKEN_GREATER_EQUAL]   = {NULL, binary, PREC_COMPARISON},
+    [TOKEN_LESS]            = {NULL, binary, PREC_COMPARISON},
+    [TOKEN_LESS_EQUAL]      = {NULL, binary, PREC_COMPARISON},
     [TOKEN_IDENTIFIER]      = {NULL, NULL, PREC_NONE},
-    [TOKEN_STRING]          = {NULL, NULL, PREC_NONE},
+    [TOKEN_STRING]          = {string, NULL, PREC_NONE},
     [TOKEN_NUMBER]          = {number, NULL, PREC_NONE},
     [TOKEN_AND]             = {NULL, NULL, PREC_NONE},
     [TOKEN_CLASS]           = {NULL, NULL, PREC_NONE},
@@ -220,9 +233,10 @@ ParseRule rules[] = {
 };
 
 // parse and compile any expression at or above the given precedence level
+// because that is when that particular expression ends
 static void parsePrecedence(Precedence precedence) {
-    advance();
-    ParseFn prefixRule = getRule(parser.previous.type)->prefix;
+    advance(); // read next token
+    ParseFn prefixRule = getRule(parser.previous.type)->prefix; // find its prefix function
     if (prefixRule == NULL) {
         error("Expect expression.");
         return;
@@ -238,13 +252,13 @@ static void parsePrecedence(Precedence precedence) {
         infixRule();
     }
 }
-
+// return the whole rule record
 static ParseRule* getRule(TokenType type) {
     return &rules[type];
 }
 
 static void expression() {
-    parsePrecedence(PREC_ASSIGNMENT); // start al lowest precedence and let the operators precedence take over if higher
+    parsePrecedence(PREC_ASSIGNMENT); // start at lowest precedence and let the operators precedence take over if higher
 }
 
 bool compile(const char* source, Chunk* chunk) {

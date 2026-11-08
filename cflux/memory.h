@@ -2,6 +2,9 @@
 
 #include "common.h"
 
+#define ALLOCATE(type, count) \
+        (type*)reallocate(NULL, 0, sizeof(type) * (count)) // NULL so it allocates us a new block
+
 #define GROW_CAPACITY(capacity) \
         ((capacity) < 8 ? 8 : (capacity) * 2)
 

@@ -12,5 +12,5 @@
 #include <stdio.h>
 
 // comment out to turn off
-//#define DEBUG_PRINT_CODE
+#define DEBUG_PRINT_CODE
 //#define DEBUG_TRACE_EXCECUTION
