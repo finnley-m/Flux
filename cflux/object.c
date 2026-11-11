@@ -9,30 +9,52 @@
 #define ALLOCATE_OBJ(type, objectType) \
     (type*)allocateObject(sizeof(type), objectType); // sizeof(type) so give space for fields
 
+#define ALLOCATE_EXTRA(type, extra, objectType) \
+    (type*)allocateObject(sizeof(type) + extra, objectType);
+
 static Obj* allocateObject(size_t size, ObjType type) {
     Obj* object = (Obj*)reallocate(NULL, 0, size);
     object->type = type;
+
+    // allocated object points to first element in object list
+    // list start then points to new object, adding the object to the list
+    object->next = vm.objects;
+    vm.objects   = object;
+
     return object;
 }
 
-static ObjString* allocateString(char* chars, int length) {
-    ObjString* string = ALLOCATE_OBJ(ObjString, OBJ_STRING);
+static ObjString* allocateString(const char* chars, int length, uint32_t hash) {
+    ObjString* string = ALLOCATE_EXTRA(ObjString, length + 1, OBJ_STRING);
     string->length = length;
-    string->chars = chars;
-    
+    string->hash   = hash;
+    memcpy(string->chars, chars, length);
+    string->chars[length] = '\0';
     return string;
 }
+
+static uint32_t hashString(const char* key, int length) {
+    uint32_t hash = 2166136261u;
+
+    for(int i = 0; i < length; i++) {
+        hash ^= key[i];
+        hash *= 16777619;
+    }
+
+    return hash;
+}
+
 // takes ownership of already allocated string
-ObjString* takeString(char* chars, int length) {
-    return allocateString(chars, length);
+ObjString* takeString(const char* chars, int length) {
+    uint32_t hash = hashString(chars, length);
+
+    return allocateString(chars, length, hash);
 }
 // take a string it doesnt own and makes a copy
 ObjString* copyString(const char* chars, int length) {
-    char* heapChars = ALLOCATE(char, length + 1); // + 1 for '\0'
-    memcpy(heapChars, chars, length); // copy from text to our heapChars var
-    heapChars[length] = '\0';
+    uint32_t hash = hashString(chars, length);
 
-    return allocateString(heapChars, length);
+    return allocateString(chars, length, hash);
 }
 
 void printObject(Value value) {

@@ -16,15 +16,17 @@ typedef enum {
 
 struct Obj {
     ObjType type;
+    struct Obj* next;
 };
 
 struct ObjString {
     Obj obj; // struct expands inside in order so they have the same location
     int length;
-    char* chars;
+    uint32_t hash;
+    char chars[];
 };
 
-ObjString* takeString(char* chars, int length);
+ObjString* takeString(const char* chars, int length);
 ObjString* copyString(const char* chars, int length);
 void printObject(Value value);
 

@@ -9,6 +9,8 @@ typedef struct {
     uint8_t* pc; // program counter
     Value stack[STACK_MAX];
     Value* stackTop;
+
+    Obj* objects; // linked list to store all allocated objects
 } VM;
 
 typedef enum {
@@ -16,6 +18,8 @@ typedef enum {
     INTERPRET_COMPILE_ERROR,
     INTERPRET_RUNTIME_ERROR
 } InterpretResult;
+
+extern VM vm;
 
 void initVM();
 void freeVM();

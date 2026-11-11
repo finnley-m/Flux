@@ -11,6 +11,7 @@ VM vm;
 
 static void resetStack() {
     vm.stackTop = vm.stack;
+    vm.objects  = NULL;
 }
 
 void initVM() {
@@ -18,7 +19,7 @@ void initVM() {
 }
 
 void freeVM() {
-
+    freeObjects();
 }
 
 static void runtimeError(const char* format, ...) {
@@ -63,7 +64,7 @@ static void concatenate() {
     // combine strings
     memcpy(chars, a->chars, a->length);
     memcpy(chars + a->length, b->chars, b->length);
-    chars[length] = '0';
+    chars[length] = '\0';
 
     ObjString* result = takeString(chars, length);
     push(OBJ_VAL(result));
