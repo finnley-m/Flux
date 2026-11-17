@@ -17,12 +17,28 @@ void freeTable(Table* table) {
     initTable(table);
 }
 
+// returns the position of the entry.
+// returns empty space with key NULL if not found
 static Entry* findEntry(Entry* entries, int capacity, ObjString* key) {
-    uint32_t index = key->hash & capacity;
+    uint32_t index   = key->hash % capacity;
+    Entry* tombstone = NULL;
+
     for(;;) {
         Entry* entry = &entries[index];
 
-        if(entry->key == key || entry->key == NULL) {
+        if(entry->key == NULL) {
+            if(IS_NULL(entry->value)) {
+                // empty entry -> return the tombstone location if found as it gets rid of the tombstone
+                //                means that array capacity is wasted less of tombstones as we automatically
+                //                use them. else just return the empty cell found.
+                return tombstone != NULL ? tombstone : entry;
+            }
+            else {
+                // tombstone found
+                if(tombstone == NULL) tombstone = entry;
+            } 
+        } else if(entry->key == key) {
+            // correct key found
             return entry;
         }
 
@@ -30,6 +46,7 @@ static Entry* findEntry(Entry* entries, int capacity, ObjString* key) {
     }
 }
 
+// return wether we found the value associated with the key or not
 bool tableGet(Table* table, ObjString* key, Value* value) {
     if(table->count == 0) return false;
 
@@ -40,14 +57,15 @@ bool tableGet(Table* table, ObjString* key, Value* value) {
     return true;
 }
 
-static adjustCapacity(Table* table, int capacity) { // this capacity is target capacity
+static void adjustCapacity(Table* table, int capacity) { // this capacity is target capacity
     Entry* entries = ALLOCATE(Entry, capacity);
     for(int i = 0; i < capacity; i++) {
         // initialize new table
         entries[i].key   = NULL;
         entries[i].value = NULL_VAL;
     }
-
+    // recount as we discard tombstone entries when resizing 
+    table->count = 0;
     for(int i = 0; i < table->capacity; i++) {
         Entry* entry = &table->entries[i];
         if(entry->key == NULL) continue;
@@ -55,6 +73,7 @@ static adjustCapacity(Table* table, int capacity) { // this capacity is target c
         Entry* dest = findEntry(entries, capacity, entry->key);
         dest->key   = entry->key;
         dest->value = entry->value;
+        table->count++;
     }
 
     FREE_ARRAY(Entry, table->entries, table->capacity);
@@ -78,11 +97,27 @@ bool tableSet(Table* table, ObjString* key, Value value) {
     
     // if the entry does not have a key in it, we are creating a new key for the table
     bool isNewKey = entry->key == NULL;
-    if (isNewKey) table->count++;
+    if (isNewKey && IS_NULL(entry->value)) table->count++; 
+    // * null check is so we dont increment when replacing tombstone
 
     entry->key = key;
     entry->value = value;
     return isNewKey;
+}
+
+// return wether we successfully deleted
+bool tableDelete(Table* table, ObjString* key) {
+    if(table->count == 0) return false;
+
+    // find entry
+    Entry* entry = findEntry(table->entries, table->capacity, key);
+    if(entry->key == NULL) return false;
+
+    // we define a tombstone as having a null key and true value (arbritary value)
+    // place tombstone at entry
+    entry->key   = NULL;
+    entry->value = BOOL_VAL(true);
+    return true;
 }
 
 void tableAddAll(Table* from, Table* to) {
@@ -91,5 +126,27 @@ void tableAddAll(Table* from, Table* to) {
         if(entry->key != NULL) {
             tableSet(to, entry->key, entry->value);
         }
+    }
+}
+
+// look up given string and return reference
+ObjString* tableFindString(Table* table, const char* chars, int length, uint32_t hash) {
+    if(table->count == 0) return NULL;
+
+    uint32_t index = hash % table->capacity;
+
+    for(;;) {
+        Entry* entry = &table->entries[index];
+
+        if(entry->key == NULL) {
+            // stop if we find non tombstone entry
+            if(IS_NULL(entry->value)) return NULL;
+        } else if (entry->key->length == length && 
+                   entry->key->hash == hash && 
+                   memcmp(entry->key->chars, chars, length) == 0) {
+            return entry->key;
+        }
+
+        index = (index + 1) % table->capacity;
     }
 }

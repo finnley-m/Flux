@@ -11,14 +11,18 @@ VM vm;
 
 static void resetStack() {
     vm.stackTop = vm.stack;
-    vm.objects  = NULL;
 }
 
 void initVM() {
     resetStack();
+    vm.objects  = NULL; // initialise object array
+    initTable(&vm.strings); // initialise vms string hash table
+    initTable(&vm.globals);
 }
 
 void freeVM() {
+    freeTable(&vm.globals);
+    freeTable(&vm.strings);
     freeObjects();
 }
 
@@ -30,7 +34,7 @@ static void runtimeError(const char* format, ...) {
     fputs("\n", stderr);
 
     size_t instruction = vm.pc - vm.chunk->code - 1;
-    int line = vm.chunk->lines[instruction];
+    int line = getLineNumber(vm.chunk, (int)instruction);
     fprintf(stderr, "[line %d] in script\n", line);
 
     resetStack();
@@ -74,6 +78,8 @@ static InterpretResult run() {
 #define READ_BYTE() (*vm.pc++)
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
 #define READ_CONSTANT_LONG()   (vm.chunk->constants.values[ READ_BYTE()<<16 | READ_BYTE()<<8 | READ_BYTE() ])
+#define READ_STRING() AS_STRING(READ_CONSTANT())
+#define READ_STRING_LONG() AS_STRING(READ_CONSTANT_LONG())
 
 // "do" will force semicolon and safe expansion in all statement contexts
 #define BINARY_OP(valueType, op) \
@@ -116,6 +122,63 @@ static InterpretResult run() {
             case OP_NULL:       push(NULL_VAL); break;
             case OP_TRUE:       push(BOOL_VAL(true)); break;
             case OP_FALSE:      push(BOOL_VAL(false)); break;
+            
+            case OP_POP: pop(); break;
+
+            case OP_GET_GLOBAL: {
+                ObjString* name = READ_STRING();
+                Value value;
+                if(!tableGet(&vm.globals, name, &value)) {
+                    runtimeError("Undefined variable '%s'", name->chars);
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                push(value);
+                break;
+            }
+            case OP_GET_GLOBAL_LONG: {
+                ObjString* name = READ_STRING_LONG();
+                Value value;
+                if(!tableGet(&vm.globals, name, &value)) {
+                    runtimeError("Undefined variable '%s'", name->chars);
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                push(value);
+                break;
+            }
+
+            case OP_SET_GLOBAL: {
+                ObjString* name = READ_STRING();
+                if(tableSet(&vm.globals, name, peek(0))) { // cant set a variable that hasnt been defined yet
+                    tableDelete(&vm.globals, name);
+                    runtimeError("Undefined variable '%s'.", name->chars);
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                break;
+            }
+
+            case OP_SET_GLOBAL_LONG: {
+                ObjString* name = READ_STRING_LONG();
+                if(tableSet(&vm.globals, name, peek(0))) { // cant set a variable that hasnt been defined yet
+                    tableDelete(&vm.globals, name);
+                    runtimeError("Undefined variable '%s'.", name->chars);
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                break;
+            }
+
+            case OP_DEFINE_GLOBAL: {
+                ObjString* name = READ_STRING();
+                tableSet(&vm.globals, name, peek(0));
+                pop();
+                break;
+            }
+            case OP_DEFINE_GLOBAL_LONG: {
+                ObjString* name = READ_STRING_LONG();
+                tableSet(&vm.globals, name, peek(0));
+                pop(); // peek first and pop after for gc
+                break;
+            }
+            
             // Logic
             case OP_EQUAL: {
                 Value b = pop();
@@ -153,13 +216,19 @@ static InterpretResult run() {
                 push(NUMBER_VAL(-AS_NUMBER(pop())));
                 break;
             // Keywords
-            case OP_RETURN: {
+            case OP_PRINT: {
                 printValue(pop());
                 printf("\n");
+                break;
+            }
+            case OP_RETURN: {
+                // exit interpreter
                 return INTERPRET_OK;
             }
         }
     }
+#undef READ_STRING
+#undef READ_STRING_LONG
 #undef READ_BYTE
 #undef READ_CONSTANT
 #undef READ_CONSTANT_LONG

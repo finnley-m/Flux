@@ -6,4 +6,3 @@
 
 void dissasembleChunk(Chunk* chunk, const char* name);
 int dissasembleInstruction(Chunk* chunk, int offset);
-void printValue(Value value);
